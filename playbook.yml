@@ -1,0 +1,19 @@
+- hosts: "{{ infra }}"
+  roles:
+    - role: va
+      tags: va
+
+    - role: smart_accounts
+      tags: smart_accounts
+
+    - role: transfer
+      tags: transfer
+
+    - role: sl_transfer
+      tags: sl_transfer
+
+    - role: merge_json
+      tags: merge_json
+
+    - role: pak
+      tags: pak
