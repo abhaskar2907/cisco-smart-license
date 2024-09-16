@@ -1,0 +1,9 @@
+---
+- block:
+  - name: "{{ infra }} : get on premise accounts"
+    include_tasks: on_prem_accounts.yml
+    loop: "{{ on_prem_ips }}"
+    loop_control:
+      loop_var: on_prem_ip
+    vars:
+      api: "https://{{ on_prem_ip.ip_port }}/api/v1"

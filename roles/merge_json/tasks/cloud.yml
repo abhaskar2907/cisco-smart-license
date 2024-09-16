@@ -1,0 +1,46 @@
+---
+- block:
+   - name: "{{ infra }} : save cloud_accounts.json and on_prem_accounts_all.json"
+     set_fact:
+      cloud_accounts_file: "{{ lookup('ansible.builtin.file', 'exports/cloud_accounts.json') }}"
+      on_prem_accounts_file: "{{ lookup('ansible.builtin.file', 'exports/on_prem_accounts_all.json') }}"
+
+   - name: "{{ infra }} : fetch on prem accounts with domain names"
+     include_tasks: cloud_accounts.yml
+     loop: "{{ cloud_accounts_file.accounts }}"
+     loop_control:
+       loop_var: cloud_account
+       label: "{{ cloud_account.accountDomain }}"
+
+    # Export cloud and on prem merged
+   - name: "{{ infra }} : exports/merged_cloud_on_prem_all.json"
+     copy:
+       content: "{{ updated_cloud }}"
+       dest: "exports/cloud_accounts_all.json"
+
+   - name: "{{ infra }} : save cloud_accounts_all.json"
+     set_fact:
+       cloud_accounts_all_file: "{{ lookup('ansible.builtin.file', 'exports/cloud_accounts_all.json') }}"
+
+   - name: "{{ infra }} : fetch on prem accounts with domain names"
+     include_tasks: cloud_on_prem_search.yml
+     loop: "{{ cloud_accounts_all_file }}"
+     loop_control:
+         loop_var: cloud_account_pick
+         label: "{{ cloud_account_pick.accountDomain }}"
+
+    # Export cloud and on prem merged
+   - name: "{{ infra }} : generate exports/merged_cloud_on_prem_all.json"
+     copy:
+       content: "{{ merged_cloud_on_prem }}"
+       dest: "exports/merged_cloud_on_prem_all.json"
+
+   - name: "{{ infra }} : generate docx template"
+     ansible.builtin.script: "gen_docx.py {{ playbook_dir }}/exports/merged_cloud_on_prem_all.json"
+     args:
+       executable: python
+     register: templ
+
+   - name: Print Readiness script output
+     debug:
+       msg: "{{ templ.stdout_lines }}"

@@ -1,0 +1,32 @@
+---
+- block:
+  - name: "check if vrf is configured"
+    cisco.ios.ios_command:
+      commands: show vrf
+    register: vrf
+
+  - name: "fail if vrf is configured"
+    fail:
+      msg: "vrf config found. Please reconfig manually and run register"
+    when: vrf.stdout | length != 1
+
+  - name: "fetch current call home profile destination address"
+    cisco.ios.ios_command:
+      commands: show call-home profile CSSM | in Other address
+    register: email
+
+  - name: "configuring call home profile destination address to {{ infra }}"
+    cisco.ios.ios_config:
+      lines:
+        - "profile {{ profile_name }}"
+        - "no destination address http {{ email.stdout.0.split(' ')[2] }}"
+        - "destination address http {{ destination_address }}"
+      parents: call-home
+    register: call_home
+    when: vrf.stdout | length == 1
+    vars:
+      ansible_command_timeout: 60
+
+  - name: "print call home profile configure output"
+    debug:
+      msg: "{{ call_home }}"

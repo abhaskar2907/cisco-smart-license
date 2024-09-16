@@ -1,0 +1,57 @@
+---
+- block:
+  - name: "{{ infra }} : {{ domain_name }}: fetch license usage"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ domain_name }}/licenses"
+      method: POST
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      body:
+        virtualAccounts:
+          - "{{ item.name }}"
+      validate_certs: false
+    loop: "{{ virtual_accounts }}"
+    register: usage
+    loop_control:
+      label: "virtual account name: {{ item.name}}"
+    ignore_errors: yes
+
+#   Export License Details
+  - name: "{{ infra }} : {{ domain_name }} : generate exports/{{ exported_file_prefix }}_{{ domain_name }}_licenses.json"
+    copy:
+      content: "{{ usage | community.general.json_query('results[*].{virtual_account: item, licenses: json.licenses[*] }') }}"
+      dest: "exports/{{ exported_file_prefix }}_{{ domain_name }}_licenses.json"
+
+#   Export out of compliance licenses
+  - name: "{{ infra }} : {{ domain_name }} : generate exports/{{ exported_file_prefix }}_{{ domain_name }}_out_of_compliance_licenses.json"
+    copy:
+      content: "{{ usage | community.general.json_query('results[*].{virtual_account: item, licenses: json.licenses[?status==`Out Of Compliance`] }') }}"
+      dest: "exports/{{ exported_file_prefix }}_{{ domain_name }}_out_of_compliance_licenses.json"
+
+  - name: "{{ infra }} : {{ domain_name }} : fetch license subscriptions"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ domain_name }}/license-subscriptions"
+      method: POST
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+      body:
+        virtualAccounts:
+          - "{{ item.name }}"
+    loop: "{{ virtual_accounts }}"
+    loop_control:
+      label: "virtual account name: {{ item.name}}"
+    register: subscriptions
+    ignore_errors: yes
+
+#   Export License subscriptions Details
+  - name: "{{ infra }} : {{ domain_name }} : generate exports/{{ exported_file_prefix }}_{{ domain_name }}_licenses_subscriptions.json"
+    copy:
+      content: "{{ subscriptions | community.general.json_query('results[*].{domain_name: item, licenses_subscriptions: json.licenseSubscriptions}') }}"
+      dest: "exports/{{ exported_file_prefix }}_{{ domain_name }}_licenses_subscriptions.json"

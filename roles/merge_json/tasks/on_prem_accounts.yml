@@ -1,0 +1,18 @@
+---
+- block:
+    - name: "{{ infra }} : load on_prem_{{ on_prem_input.ip_port }}_accounts.json file"
+      set_fact:
+        on_prem_accounts_file: "{{ lookup('ansible.builtin.file', 'exports/on_prem_' + on_prem_input.ip_port + '_accounts.json' ) }}"
+
+    - name: "{{ infra }} : {{ on_prem_input.ip_port }} : find export files"
+      include_tasks: on_prem_merge.yml
+      loop: "{{ on_prem_accounts_file }}"
+      loop_control:
+        loop_var: on_prem_account
+        label: "{{ on_prem_account.name }}"
+      vars:
+        on_prem_acc_name: "{{ on_prem_account.name }}"
+
+
+
+

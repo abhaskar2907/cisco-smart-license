@@ -1,0 +1,29 @@
+---
+- name: "{{ infra }} : {{ domain_name }} : Fail if va_names in all.yml is empty"
+  fail:
+    msg: "Please provide va_names in all.yml"
+  when: not va_names or va_names is undefined
+
+- name: "{{ infra }} : {{ domain_name }} : virtual accounts to be deleted"
+  debug:
+    msg: "{{ va_names }}"
+
+- name: "{{ infra }} : {{ domain_name }} : delete virtual accounts"
+  ansible.builtin.uri:
+    url: "{{ api }}/accounts/{{ domain_name_account | default(domain_name) }}/virtual-accounts/{{ item.name }}/delete"
+    method: POST
+    body_format: json
+    return_content: true
+    headers:
+      Authorization: Bearer {{ access_token }}
+      Content-Type: application/json
+    validate_certs: false
+  register: delete_va
+  loop: "{{ va_names }}"
+  loop_control:
+    label: "{{ item.name }}"
+  ignore_errors: True
+
+- name: "{{ infra }} : {{ domain_name }} : print delete output"
+  debug:
+    msg: "{{ delete_va | community.general.json_query('results[*].json') }}"

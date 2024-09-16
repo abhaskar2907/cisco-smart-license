@@ -1,0 +1,34 @@
+---
+- block:
+  - name: "{{ infra }} : {{on_prem_input.ip_port}} : {{on_prem_account.name}} : load files"
+    set_fact:
+      on_prem_license_file: "{{ lookup('ansible.builtin.file', 'exports/on_prem_' + on_prem_input.ip_port + '_' + on_prem_account.name + '_licenses.json' ) }}"
+      on_prem_device_file: "{{ lookup('ansible.builtin.file', 'exports/on_prem_' + on_prem_input.ip_port + '_' + on_prem_account.name + '_devices.json' ) }}"
+      on_prem_lic_subs_file: "{{ lookup('ansible.builtin.file', 'exports/on_prem_' + on_prem_input.ip_port + '_' + on_prem_account.name + '_subscriptions_licenses.json' ) }}"
+      ooc_license_file: "{{ lookup('ansible.builtin.file', 'exports/on_prem_' + on_prem_input.ip_port + '_' + on_prem_account.name + '_out_of_compliance_licenses.json' ) }}"
+
+  - name: "{{ infra }} : {{on_prem_input.ip_port}} : {{on_prem_account.name}} : filter file detail"
+    set_fact:
+      on_prem_licenses: "{{ on_prem_license_file|json_query('[*].{virtual_account: virtual_account.name, licenses: licenses.licenses}') }}"
+      on_prem_devices: "{{ on_prem_device_file|json_query('[*].{virtual_account: va_name.name, devices: device_details}') }}"
+      on_prem_subs: "{{ on_prem_lic_subs_file|json_query('[*].{virtual_account: virtual_account.name, licenseSubscriptions: licenses.licenseSubscriptions}') }}"
+      on_prem_ooc: "{{ ooc_license_file|json_query('[*].{virtual_account: virtual_account.name, ooc_licenses: licenses}') }}"
+
+  - name: "{{ infra }} : {{on_prem_input.ip_port}} : {{on_prem_account.name}} : merge file content"
+    set_fact:
+      merge_files: "{{ on_prem_account | combine({'licenses': on_prem_licenses},{'devices': on_prem_devices},
+                                                  {'licenseSubscriptions': on_prem_subs},{'outOfComplianceLicenses': on_prem_ooc}) }}"
+
+  - name: "{{ infra }} : {{on_prem_input.ip_port}} : {{on_prem_account.name}} : store merged content"
+    set_fact:
+      updated_on_prem: "{{ updated_on_prem|d([]) + [merge_files] }}"
+
+
+
+
+
+
+
+
+
+

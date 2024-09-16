@@ -1,0 +1,31 @@
+---
+- block:
+  - name: "{{ infra }} : {{ domain_name }} : get devices in each virtual account"
+    ansible.builtin.uri:
+      url: "https://swapi.cisco.com//services/api/smart-accounts-and-licensing/v1/accounts/{{ domain_name }}/virtual-accounts/{{ item.name | replace(' ','%20') }}/devices"
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    loop: "{{ virtual_accounts }}"
+    loop_control:
+      label: "{{ item.name }}"
+    register: product_instance
+    ignore_errors: true
+
+  - name: "{{ infra }} : {{ domain_name }} : generate exports/{{ exported_file_prefix }}_{{ domain_name }}_device_details.json"
+    copy:
+      content: "{{ product_instance | community.general.json_query('results[*].{virtual_account: item, total_devices: json.totalRecords, device_details: json.devices}') }}"
+      dest: "exports/{{ exported_file_prefix }}_{{ domain_name }}_device_details.json"
+
+#  - name: "{{ infra }} : {{ domain_name }} : generate docx template"
+#    ansible.builtin.script: "cloud_mail_merge.py {{ playbook_dir }}/exports/{{ exported_file_prefix }}_accounts.json {{ playbook_dir }}/exports/{{ exported_file_prefix }}_{{ domain_name }}_virtual_accounts.json {{ playbook_dir }}/exports/{{ exported_file_prefix }}_{{ domain_name }}_device_details.json"
+#    args:
+#      executable: python
+#    register: templ
+#
+#  - name: "{{ infra }} : {{ domain_name }} : Print Readiness script output"
+#    debug:
+#      msg: "{{ templ.stdout_lines }}"

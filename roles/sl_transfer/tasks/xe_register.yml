@@ -1,0 +1,11 @@
+---
+- block:
+  - name: "{{ infra }} : {{ ansible_host }} : register with domain name: {{ domain_name }}, virtual account name: {{ va_name }}"
+    cisco.ios.ios_command:
+      commands:
+        - "license smart register idtoken {{ sl_token }} force"
+    register: register
+
+  - name: "{{ infra }} : {{ ansible_host }} : print register output"
+    debug:
+      msg: "{{ register.stdout_lines }}"

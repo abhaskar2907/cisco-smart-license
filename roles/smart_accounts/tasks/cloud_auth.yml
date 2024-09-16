@@ -1,0 +1,17 @@
+---
+- block:
+  - name: "{{ infra }} : get cloud token"
+    ansible.builtin.uri:
+      url: "{{ cloud_oauth_api }}"
+      method: POST
+      body_format: "form-urlencoded"
+      return_content: true
+      body:
+        client_id: "{{ client_id }}"
+        client_secret: "{{ client_secret }}"
+        grant_type: client_credentials
+    register: cloud_oauth
+
+  - name: "{{ infra }} : save access token"
+    set_fact:
+      access_token: "{{ cloud_oauth.json.access_token }}"

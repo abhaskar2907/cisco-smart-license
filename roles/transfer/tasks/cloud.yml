@@ -1,0 +1,73 @@
+---
+- block:
+  - name: "{{ infra }} : {{ domain_name }} : assert input devices in group_vars/cloud.yml"
+    ansible.builtin.assert:
+      that:
+        - to_virtual_account is defined
+        - to_virtual_account != None
+        - from_virtual_account is defined
+        - from_virtual_account != None
+        - productInstances is defined
+        - productInstances != None
+      fail_msg: "Failure: make sure to_virtual_account, from_virtual_account and productInstances are defined"
+      success_msg: "Success: to_virtual_account, from_virtual_account and productInstances found"
+
+  - name: "{{ infra }} : {{ domain_name }} : print input devices to be transferred"
+    debug:
+      msg:
+        - "productInstances: {{ productInstances }}"
+        - "to_virtual_account: {{ to_virtual_account }}"
+        - "from_virtual_account: {{ from_virtual_account }}"
+
+  - name: "{{ infra }} : {{ domain_name }} : get devices from {{ from_virtual_account }}"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ domain_name }}/virtual-accounts/{{ from_virtual_account }}/devices"
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    register: get_device
+
+  - name: "{{ infra }} : {{ domain_name }} : assert input devices in {{ domain_name }}/{{ from_virtual_account }}"
+    fail:
+      msg: "make sure device present in {{ domain_name }}/{{ from_virtual_account }}"
+    when: item not in get_device.json | community.general.json_query('devices[*].productTagName')
+    loop: "{{ productInstances | community.general.json_query('[*].productTagName') }}"
+
+  - name: "{{ infra }} : {{ domain_name }} : transfer device from {{ from_virtual_account }} to {{ to_virtual_account }}"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ domain_name }}/virtual-accounts/{{ from_virtual_account }}/devices/transfer"
+      method: POST
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      body:
+        productInstances: "{{ productInstances }}"
+      validate_certs: false
+    register: transfer_details
+
+  - name: "{{ infra }} : {{ domain_name }} : print transfer output"
+    debug:
+      msg: "{{ transfer_details.json }}"
+
+  - name: "{{ infra }} : {{ domain_name }} : get devices from {{ to_virtual_account }}"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ domain_name }}/virtual-accounts/{{ to_virtual_account }}/devices"
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    register: get_device
+
+  - name: "{{ infra }} : {{ domain_name }} : skip if transfer successful"
+    fail:
+      msg: "transfer failed: device not found in {{ domain_name }}/{{ to_virtual_account }}"
+    when: item not in get_device.json | community.general.json_query('devices[*].productTagName')
+    loop: "{{ productInstances | community.general.json_query('[*].productTagName') }}"
+    register: assert_device

@@ -1,0 +1,37 @@
+---
+- block:
+  - name: "{{ infra }} : {{ ansible_host }} : check device license status"
+    cisco.ios.ios_command:
+      commands: "show license status"
+    register: check_info
+    until: '" REGISTERED" in check_info.stdout.0'
+    ignore_errors: yes
+
+  - name: "{{ infra }} : {{ ansible_host }} : print device license status output"
+    debug:
+      msg: "{{ check_info.stdout_lines }}"
+
+  - name: "{{ infra }} : {{ ansible_host }} : assert device license status"
+    ansible.builtin.assert:
+      that: '" REGISTERED" in check_info.stdout.0'
+      success_msg: "device is registered"
+      fail_msg: "device is not registered"
+
+  - name: "{{ infra }} : {{ ansible_host }} : fetch call-home active profile"
+    cisco.ios.ios_command:
+      commands: "show call-home | in status: ACTIVE"
+    register: active_profile
+
+  - name: "{{ infra }} : {{ ansible_host }} : save call-home active profile"
+    set_fact:
+      profile_name: "{{ active_profile.stdout.0.split(' ')[1] }}"
+
+  - name: "{{ infra }} : {{ ansible_host }} : show call-home profile {{ profile_name }}"
+    cisco.ios.ios_command:
+      commands: "show call-home profile {{ profile_name }}"
+    register: show_profile
+    ignore_errors: yes
+
+  - name: "{{ infra }} : {{ ansible_host }} : print show call-home profile output"
+    debug:
+      msg: "{{ show_profile.stdout_lines }}"

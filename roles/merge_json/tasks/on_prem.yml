@@ -1,0 +1,14 @@
+---
+- block:
+  - name: "{{ infra }} : aggregate on prem account files"
+    include_tasks: on_prem_accounts.yml
+    loop: "{{ on_prem_ips }}"
+    loop_control:
+        loop_var: on_prem_input
+        label: "{{ on_prem_input.ip_port }}"
+
+    # Export merged on prem accounts
+  - name: "{{ infra }} : exports/on_prem_accounts_all.json"
+    copy:
+      content: "{{ updated_on_prem }}"
+      dest: "exports/on_prem_accounts_all.json"

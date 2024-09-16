@@ -1,0 +1,59 @@
+---
+- block:
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : {{ outer_item.name }} : get license usage for all virtual accounts"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ outer_item.name }}/licenses"
+      method: POST
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      body:
+        virtualAccounts:
+          - "{{ item.name }}"
+      validate_certs: false
+    loop: "{{ outer_item.virtualAccounts }}"
+    loop_control:
+      label: "{{ item.name }}"
+    register: license_usage
+
+#   Export all licenses
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : {{ outer_item.name }} : generate exports/{{ exported_file_prefix }}_{{ on_prem_ip.ip_port }}_{{ outer_item.name }}_licenses.json"
+    copy:
+      content: "{{ license_usage | json_query('results[*].{virtual_account: item, licenses: json}') }}"
+      dest: "exports/{{ exported_file_prefix }}_{{ on_prem_ip.ip_port }}_{{ outer_item.name }}_licenses.json"
+
+#   Filter and Export out of compliance licenses
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : {{ outer_item.name }} : generate exports/{{ exported_file_prefix }}_{{ on_prem_ip.ip_port }}_{{ outer_item.name }}_out_of_compliance_licenses.json"
+    copy:
+      content: "{{ license_usage | json_query('results[*].{virtual_account: item, licenses: json.licenses[?status==`Out Of Compliance`]}') }}"
+      dest: "exports/{{ exported_file_prefix }}_{{ on_prem_ip.ip_port }}_{{ outer_item.name }}_out_of_compliance_licenses.json"
+
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : {{ outer_item.name }} : get license subscription for all virtual accounts"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ outer_item.name }}/license-subscriptions"
+      method: POST
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+      body:
+        virtualAccounts:
+          - "{{ item.name }}"
+    loop: "{{ outer_item.virtualAccounts }}"
+    loop_control:
+      label: "{{ item.name }}"
+    register: license_subscriptions
+
+#   Export all license subscriptions
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : {{ outer_item.name }} : generate exports/{{ exported_file_prefix }}_{{ on_prem_ip.ip_port }}_{{ outer_item.name }}_subscriptions_licenses.json"
+    copy:
+      content: "{{ license_subscriptions | json_query('results[*].{virtual_account: item, licenses: json}') }}"
+      dest: "exports/{{ exported_file_prefix }}_{{ on_prem_ip.ip_port }}_{{ outer_item.name }}_subscriptions_licenses.json"
+
+
+
+

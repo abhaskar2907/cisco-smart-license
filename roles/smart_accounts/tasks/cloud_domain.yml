@@ -1,0 +1,10 @@
+---
+- block:
+  - name: "{{ infra }} : {{ domain_name }} : fetch virtual accounts"
+    include_tasks: cloud_va.yml
+
+  - name: "{{ infra }} : {{ domain_name }} : fetch licenses"
+    include_tasks: cloud_license.yml
+
+  - name: "{{ infra }} : {{ domain_name }} : fetch devices"
+    include_tasks: cloud_device.yml

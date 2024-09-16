@@ -1,0 +1,25 @@
+---
+- block:
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : get on premise token"
+    ansible.builtin.uri:
+      url: "https://{{ on_prem_ip.ip_port }}/oauth/token"
+      method: POST
+      body_format: json
+      return_content: true
+      headers:
+        Content-Type: application/json
+      body:
+        client_id: "{{ on_prem_ip.client_id }}"
+        client_secret: "{{ on_prem_ip.client_secret }}"
+        grant_type: password
+        username: "{{ user }}"
+        password: "{{ pass1 }}"
+      validate_certs: false
+    register: on_prem_oauth
+
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : save access token"
+    set_fact:
+      access_token: "{{ on_prem_oauth.json.access_token }}"
+
+#  - debug:
+#      msg: "Access Token: {{ access_token }}"

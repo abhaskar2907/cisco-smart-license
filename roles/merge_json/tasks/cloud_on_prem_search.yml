@@ -1,0 +1,20 @@
+---
+- block:
+    - name: "{{ infra }} : {{ cloud_account_pick.accountDomain }} : fetch on prem accounts"
+      debug:
+          msg: "{{ item }}"
+      loop: "{{ on_prem_accounts_file }}"
+      loop_control:
+          label: "{{ item.domain }}"
+      when: item.domain == cloud_account_pick.accountDomain
+      register: on_prem_cloud
+
+    - name: "{{ infra }} : {{ cloud_account_pick.accountDomain }} : merge on-prem accounts"
+      set_fact:
+        merging_cloud_on_prem: "{{ cloud_account_pick | combine({'onPremAccounts' : on_prem_cloud.results | json_query('[*].msg')}) }}"
+
+    - name: "{{ infra }} : save merged cloud accounts"
+      set_fact:
+        merged_cloud_on_prem: "{{ merged_cloud_on_prem | default([]) + [merging_cloud_on_prem] }}"
+
+

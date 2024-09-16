@@ -1,0 +1,60 @@
+---
+- block:
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : get on premise token"
+    include_tasks: on_prem_auth.yml
+
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : get account details"
+    ansible.builtin.uri:
+      url: "{{ api }}/upstream_satellites/accounts"
+      method: POST
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    register: account_details
+
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : save account details"
+    set_fact:
+      on_prem_accounts: "{{ account_details.json.accounts }}"
+
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : get virtual accounts list"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ item.name }}/virtual-accounts"
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    register: on_prem_va
+    loop: "{{ on_prem_accounts }}"
+    loop_control:
+      label: "on_prem_account: {{ item.name }}"
+
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : filter virtual accounts"
+    debug:
+        msg: "{{ item.item |combine({'virtualAccounts' : item.json.virtualAccounts}, {'virtual_accounts' : omit}) }}"
+    loop: "{{ on_prem_va.results }}"
+    loop_control:
+      label: "{{ item.item.name }}"
+    register: on_prem_virtual_accounts
+
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : generate exports/{{ exported_file_prefix }}_{{ on_prem_ip.ip_port }}_accounts.json"
+    copy:
+      content: "{{ on_prem_virtual_accounts.results | json_query('[*].msg') }}"
+      dest: "exports/{{ exported_file_prefix }}_{{ on_prem_ip.ip_port }}_accounts.json"
+
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : fetch on prem licenses"
+    include_tasks: on_prem_licenses.yml
+    loop: "{{ on_prem_virtual_accounts.results | json_query('[*].msg') }}"
+    loop_control:
+      loop_var: outer_item
+      label: "{{ outer_item.name }}"
+
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : fetch on-prem devices"
+    include_tasks: on_prem_device.yml
+    loop: "{{ on_prem_virtual_accounts.results | json_query('[*].msg') }}"
+    loop_control:
+      loop_var: outer_item
+      label: "{{ outer_item.name }}"

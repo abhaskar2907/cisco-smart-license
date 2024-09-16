@@ -1,0 +1,35 @@
+---
+- block:
+  - name: "{{ infra }} : {{cloud_account.accountDomain}} : load files"
+    set_fact:
+      cloud_license_file: "{{ lookup('ansible.builtin.file', 'exports/cloud_' + cloud_account.accountDomain + '_licenses.json' ) }}"
+      cloud_device_file: "{{ lookup('ansible.builtin.file', 'exports/cloud_' + cloud_account.accountDomain + '_device_details.json' ) }}"
+      cloud_lic_subs_file: "{{ lookup('ansible.builtin.file', 'exports/cloud_' + cloud_account.accountDomain + '_licenses_subscriptions.json' ) }}"
+      ooc_license_file: "{{ lookup('ansible.builtin.file', 'exports/cloud_' + cloud_account.accountDomain + '_out_of_compliance_licenses.json' ) }}"
+
+  - name: "{{ infra }} : {{cloud_account.accountDomain}} : filter file detail"
+    set_fact:
+      cloud_licenses: "{{ cloud_license_file|json_query('[*].{virtual_account: virtual_account.name, licenses: licenses}') }}"
+      cloud_devices: "{{ cloud_device_file|json_query('[*].{virtual_account: virtual_account.name, total_devices: total_devices, devices: device_details}') }}"
+      cloud_subs: "{{ cloud_lic_subs_file|json_query('[*].{virtual_account: domain_name.name, licenseSubscriptions: licenses_subscriptions}') }}"
+      cloud_ooc: "{{ ooc_license_file|json_query('[*].{virtual_account: virtual_account.name, ooc_licenses: licenses}') }}"
+
+  - name: "{{ infra }} : {{cloud_account.accountDomain}} : merge file content"
+    set_fact:
+      merge_cloud_files: "{{ cloud_account | combine({'licenses': cloud_licenses},{'devices': cloud_devices},
+                                                {'licenseSubscriptions': cloud_subs},{'outOfComplianceLicenses': cloud_ooc}) }}"
+
+  - name: "{{ infra }} : {{cloud_account.accountDomain}} : store merged content"
+    set_fact:
+      updated_cloud: "{{ updated_cloud|d([]) + [merge_cloud_files] }}"
+
+
+
+
+
+
+
+
+
+
+

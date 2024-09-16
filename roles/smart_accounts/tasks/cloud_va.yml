@@ -1,0 +1,49 @@
+---
+- block:
+  - name: "{{ infra }} : {{ domain_name }} : search domain name"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/search?domain={{ domain_name }}"
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    register: accounts_search
+
+  - name: "{{ infra }} : {{ domain_name }} : print domain details"
+    debug:
+      msg: "{{ accounts_search.json.accounts }}"
+
+  - name: "{{ infra }} : {{ domain_name }} : get virtual accounts"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ domain_name_account.domain_name }}/virtual-accounts"
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    register: va_list
+
+  - name: "{{ infra }} : {{ domain_name }} : print default virtual account details"
+    debug:
+      msg: "{{ va_list.json | community.general.json_query(va_name_query) }}"
+    vars:
+      va_name_query: "virtualAccounts[?isDefault=='true' || isDefault=='yes']"
+    register: default_va
+
+  - name: "{{ infra }} : {{ domain_name }} : print all virtual accounts"
+    debug:
+      msg: "{{ va_list.json.virtualAccounts }}"
+    when: print_all_va | bool
+
+  - name: "{{ infra }} : {{ domain_name }} : save virtual accounts details"
+    set_fact:
+      virtual_accounts: "{{ va_list.json.virtualAccounts if print_all_va | bool else va_list.json.virtualAccounts[:3] }}"
+
+  # Export VA Details
+  - name: "{{ infra }} : {{ domain_name }} : generate exports/{{ exported_file_prefix }}_{{ domain_name.split('/')[0] | lower }}_virtual_accounts.json"
+    copy:
+      content: "{{ filtered_va_names | default(va_list.json.virtualAccounts) }}"
+      dest: "exports/{{ exported_file_prefix }}_{{ domain_name }}_virtual_accounts.json"
+

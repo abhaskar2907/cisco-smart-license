@@ -1,0 +1,8 @@
+---
+- block:
+  - name: "{{ infra }} : {{ domain_name }} : fail if account_name is not defined"
+    fail:
+      msg: "Please provide on-prem account name"
+    when: not domain_name or domain_name is undefined
+
+  - import_tasks: "{{ va | default('list') }}.yml"

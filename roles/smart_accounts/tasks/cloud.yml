@@ -1,0 +1,17 @@
+---
+- block:
+  - name: "{{ infra }} : cloud authentication"
+    include_tasks: cloud_auth.yml
+    when: access_token is undefined
+
+  - name: "{{ infra }} : fetch cloud accounts using v2 api"
+    include_tasks: cloud_accounts.yml
+
+  - name: "{{ infra }} : fetch cloud accounts using domain name"
+    include_tasks: cloud_domain.yml
+    loop: "{{ domain_names }}"
+    loop_control:
+      loop_var: domain_name_account
+    vars:
+      domain_name: "{{ domain_name_account.domain_name.split('/')[0] }}"
+      domain_first: "{{ domain_name_account.domain_name.split('.')[0] }}"

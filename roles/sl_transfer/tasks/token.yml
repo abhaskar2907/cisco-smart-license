@@ -1,0 +1,86 @@
+---
+- block:
+  - name: "{{ infra }} : {{ domain_name }} : {{ va_name }} : fetch tokens"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ domain_name }}/virtual-accounts/{{ va_name | replace(' ','%20') }}/tokens"
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    register: get_token
+
+  - name: "{{ infra }} : {{ domain_name }} : {{ va_name }} : print tokens"
+    debug:
+      msg: "{{ get_token.json }}"
+
+  - block:
+    - name: "{{ infra }} : {{ domain_name }} : {{ va_name }} : create token if doesnt exists"
+      ansible.builtin.uri:
+        url: "{{ api }}/accounts/{{ domain_name }}/virtual-accounts/{{ va_name | replace(' ','%20') }}/tokens"
+        method: POST
+        body_format: json
+        return_content: true
+        headers:
+          Authorization: Bearer {{ access_token }}
+          Content-Type: application/json
+        body: "{{ token_create }}"
+        validate_certs: false
+      register: create_token
+
+    - name: "{{ infra }} : {{ domain_name }} : {{ va_name }} : print token create output"
+      debug:
+        msg: "{{ create_token.json }}"
+
+    when: get_token.json.tokens | length == 0
+
+  - name: "{{ infra }} : {{ domain_name }} : {{ va_name }} : fetch tokens"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ domain_name }}/virtual-accounts/{{ va_name | replace(' ','%20') }}/tokens"
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    register: get_token
+
+  - name: "{{ infra }} : {{ domain_name }} : {{ va_name }} : save token"
+    set_fact:
+      sl_token: "{{ get_token.json | community.general.json_query('tokens[*].token') | first }}"
+
+  delegate_to: localhost
+
+
+## uncomment below section to revoke token
+#  - name: "{{ infra }} : {{ domain_name }} : {{ va_name }} : list on prem tokens"
+#    ansible.builtin.uri:
+#      url: "{{ api }}/accounts/{{ domain_name }}/virtual-accounts/{{ va_name }}/tokens"
+#      body_format: json
+#      return_content: true
+#      headers:
+#        Authorization: Bearer {{ access_token }}
+#        Content-Type: application/json
+#      validate_certs: false
+#    register: get_token3
+#
+#  - name: "{{ infra }} : {{ domain_name }} : {{ va_name }} : revoke token"
+#    ansible.builtin.uri:
+#      url: "{{ api }}/accounts/{{ domain_name }}/virtual-accounts/{{ va_name }}/tokens/revoke"
+#      method: POST
+#      body_format: json
+#      return_content: true
+#      headers:
+#        Authorization: Bearer {{ access_token }}
+#        Content-Type: application/json
+#      body:
+#        tokens:
+#          - "{{ item }}"
+#      validate_certs: false
+#    loop: "{{ get_token3.json.tokens | community.general.json_query('[*].token') }}"
+#    register: revoke
+#
+#  - name: "{{ infra }} : {{ domain_name }} : {{ va_name }} : print token revoke output"
+#    debug:
+#      msg: "{{ revoke.results | community.general.json_query('[*].json.tokens') }}"

@@ -1,0 +1,50 @@
+---
+- block:
+  - name: "{{ infra }} : {{ lrp_export_filename }} : read LRP export files"
+    community.general.read_csv:
+      path: "{{ playbook_dir }}/doc_template/{{ lrp_export_filename }}"
+    register: read_lrp_export
+    delegate_to: localhost
+#    loop: "{{ lrp_export_filename }}"
+    ignore_errors: yes
+
+#  - debug:
+#      msg: "{{ item.list }}"
+#    loop: "{{ read_lrp_export.results }}"
+
+  - block:
+    - name: "{{ infra }} : {{ lrp_export_filename }} : filter and save LRP export file"
+      set_fact:
+        lrp_unconverted: "{{ read_lrp_export.list | community.general.json_query(pak_query) }}"
+      vars:
+        pak_query: "[?Status!=''] | [?Status!='CONVERTED']"
+
+    # Export lrp_unconverted
+    - name: "{{ infra }} : {{ lrp_export_filename }} : generate exports/{{ exported_file_prefix }}_lrp_unconverted.json"
+      copy:
+        content: "{{ lrp_unconverted }}"
+        dest: "exports/{{ exported_file_prefix }}_{{ lrp_export_filename }}_lrp.json"
+
+    when: not read_lrp_export.failed
+
+  - name: "{{ infra }} : {{ sku_export_filename }} : read SKU export file"
+    community.general.read_csv:
+      path: "{{ playbook_dir }}/doc_template/{{ sku_export_filename }}"
+    register: read_sku_export
+    delegate_to: localhost
+    ignore_errors: yes
+
+  - block:
+    - name: "{{ infra }} : {{ sku_export_filename }} : filter and save SKU export file"
+      set_fact:
+        sku_unconverted: "{{ read_sku_export.list | community.general.json_query(pak_query) }}"
+      vars:
+        pak_query: "[?PAK_STATUS!='CONVERTED']"
+
+    # Export lrp_unconverted
+    - name: "{{ infra }} : {{ sku_export_filename }} : generate exports/{{ exported_file_prefix }}_sku_unconverted.json"
+      copy:
+        content: "{{ sku_unconverted }}"
+        dest: "exports/{{ exported_file_prefix }}_{{ sku_export_filename }}_sku.json"
+
+    when: not read_sku_export.failed

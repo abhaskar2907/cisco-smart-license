@@ -1,0 +1,59 @@
+---
+- block:
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : get on premise token"
+    include_role:
+      name: smart_accounts
+      tasks_from: on_prem_auth.yml
+
+  - name: "{{ infra }} : {{ domain_name }} : get devices in virtual account"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ domain_name }}/virtual-accounts/{{ from_virtual_account }}/devices"
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    register: get_devices
+
+  - name: "{{ infra }} : {{ domain_name }} : assert input devices in {{ domain_name }}/{{ from_virtual_account }}"
+    fail:
+      msg: "make sure device present in {{ domain_name }}/{{ from_virtual_account }}"
+    when: item not in get_devices.json | community.general.json_query('devices[*].productTagName')
+    loop: "{{ productInstances | community.general.json_query('[*].productTagName') }}"
+
+  - name: "{{ infra }} : {{ domain_name }} : transfer device from {{ from_virtual_account }} to {{ to_virtual_account }}"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ domain_name }}/virtual-accounts/{{ from_virtual_account }}/devices/transfer"
+      method: POST
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      body:
+        productInstances: "{{ productInstances }}"
+      validate_certs: false
+    register: transfer_details
+
+  - name: "{{ infra }} : {{ domain_name }} : print transfer output"
+    debug:
+      msg: "{{ transfer_details.json }}"
+
+  - name: "{{ infra }} : {{ domain_name }} : get devices in virtual account"
+    ansible.builtin.uri:
+      url: "https://{{ on_prem_ip.ip_port }}/backend/api/v1/accounts/{{ domain_name }}/virtual-accounts/{{ to_virtual_account }}/devices"
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    register: get_devices
+
+  - name: "{{ infra }} : {{ domain_name }} : skip if transfer successful"
+    fail:
+      msg: "transfer failed: device not found in {{ domain_name }}/{{ to_virtual_account }}"
+    when: item not in get_devices.json | community.general.json_query('devices[*].productTagName')
+    loop: "{{ productInstances | community.general.json_query('[*].productTagName') }}"
+    register: assert_device

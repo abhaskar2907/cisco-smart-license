@@ -1,0 +1,35 @@
+---
+- block:
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : {{ outer_item.name }} : get devices in virtual account"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ outer_item.name }}/virtual-accounts/{{ item.name }}/devices"
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    register: get_devices
+    loop: "{{ outer_item.virtualAccounts }}"
+    loop_control:
+      label: "{{ item.name }}"
+
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : {{ outer_item.name }} : print devices"
+    debug:
+      msg: "{{ get_devices | community.general.json_query('results[*].{va_name: item, device_details: json.devices}') }}"
+
+#   Export Device Details
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : {{ outer_item.name }} : generate exports/{{ exported_file_prefix }}_{{ on_prem_ip.ip_port }}_{{ outer_item.name }}_devices.json"
+    copy:
+      content: "{{ get_devices | community.general.json_query('results[*].{va_name: item, device_details: json.devices}') }}"
+      dest: "exports/{{ exported_file_prefix }}_{{ on_prem_ip.ip_port }}_{{ outer_item.name }}_devices.json"
+
+#  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : {{ outer_item.name }} : Generate Doc template"
+#    ansible.builtin.script: "on_prem_account_details.py {{ playbook_dir }}/exports/{{ infra }}_{{ on_prem_ip.ip_port }}_accounts.json {{ on_prem_ip.ip_port }}"
+#    args:
+#      executable: python
+#    register: templ
+#
+#  - name: Print Readiness script output
+#    debug:
+#      msg: "{{ templ.stdout_lines }}"

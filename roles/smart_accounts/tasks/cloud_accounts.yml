@@ -1,0 +1,32 @@
+---
+- block:
+  - name: "{{ infra }} : fetch smart accounts using v2 api"
+    ansible.builtin.uri:
+      url: "{{ api_v2 }}/accounts"
+      body_format: json
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    register: accounts
+
+  - name: "{{ infra }} : print smart accounts using v2 api"
+    debug:
+      msg: "{{ accounts.json }}"
+
+  - name: "{{ infra }} : filter domain names if undefined"
+    set_fact:
+      domain_names: "{{ accounts.json.accounts | community.general.json_query(qry) }}"
+    vars:
+      qry: "[*].{domain_name: join('',[accountDomain,'/customer'])}"
+    when: domain_names is undefined
+
+#   Export User Details
+  - name: "{{ infra }} : generate exports/{{ exported_file_prefix }}_accounts.json"
+    copy:
+      content: "{{ accounts.json }}"
+      dest: "exports/{{ exported_file_prefix }}_accounts.json"
+
+
+

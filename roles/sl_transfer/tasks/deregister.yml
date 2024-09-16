@@ -1,0 +1,19 @@
+---
+- block:
+  - name: "{{ infra }} : {{ ansible_host }} : deregister device license"
+    cisco.ios.ios_command:
+      commands:
+        - "license smart deregister"
+    register: deregister
+    until: '"Smart Agent not registered" in deregister.stdout.0'
+
+  - name: "{{ infra }} : {{ ansible_host }} : print deregister output"
+    debug:
+      msg: "{{ deregister.stdout_lines }}"
+
+  - name: "{{ infra }} : {{ ansible_host }} : assert de-registration"
+    ansible.builtin.assert:
+      that:
+        - '"Smart Agent not registered" in deregister.stdout.0'
+      success_msg: "device is un-registered"
+      fail_msg: "device is still registered"

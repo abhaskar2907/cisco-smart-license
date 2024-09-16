@@ -1,0 +1,53 @@
+---
+- block:
+  - name: "{{ infra }} : {{ domain_name }} : get virtual accounts list"
+    ansible.builtin.uri:
+      url: "{{ api }}/accounts/{{ domain_name_account | default(domain_name) }}/virtual-accounts"
+      return_content: true
+      headers:
+        Authorization: Bearer {{ access_token }}
+        Content-Type: application/json
+      validate_certs: false
+    register: va_list
+
+  - name: "{{ infra }} : {{ domain_name }} : fetch and print default virtual accounts"
+    debug:
+      msg: "{{ va_list.json | community.general.json_query(va_name_query) }}"
+    vars:
+      va_name_query: "virtualAccounts[?isDefault=='true' || isDefault=='yes']"
+    register: default_va
+
+  - block:
+    - name: "{{ infra }} : {{ domain_name }} : print all virtual accounts"
+      debug:
+        msg: "{{ va_list.json.virtualAccounts }}"
+
+    - name: "{{ infra }} : {{ domain_name }} : save all virtual accounts details"
+      set_fact:
+        va_filter_list: "{{ va_list.json.virtualAccounts }}"
+    when: va_name_list is undefined
+
+  - block:
+    - name: "{{ infra }} : {{ domain_name }} : filter virtual accounts by name"
+      debug:
+        msg: "{{ va_list.json | community.general.json_query(va_name_query) }}"
+      vars:
+        va_name_query: "virtualAccounts[?name=='{{ item }}']"
+      loop: "{{ va_name_list }}"
+      loop_control:
+        label: "{{ item }}"
+      register: filtered_va_names
+
+    - name: "{{ infra }} : {{ domain_name }} : save virtual accounts details by name"
+      set_fact:
+        va_filter_list: "{{ va_filter_list | default([]) + item.msg  }}"
+      loop: "{{ filtered_va_names.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+    when: va_name_list is defined
+
+#  # Export VA Details
+#  - name: "{{ infra }} : {{ domain_name }} : generate exports/{{ exported_file_prefix }}_{{ domain_name.split('/')[0] | lower }}_virtual_accounts.json"
+#    copy:
+#      content: "{{ va_filter_list }}"
+#      dest: "exports/{{ exported_file_prefix }}_{{ domain_name.split('/')[0] | lower }}_virtual_accounts.json"

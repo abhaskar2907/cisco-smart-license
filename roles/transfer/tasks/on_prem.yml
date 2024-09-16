@@ -1,0 +1,28 @@
+---
+- block:
+  - name: "{{ infra }} : {{ domain_name }} : assert input devices in group_vars/{{ infra }}.yml"
+    ansible.builtin.assert:
+      that:
+        - to_virtual_account is defined
+        - to_virtual_account != None
+        - from_virtual_account is defined
+        - from_virtual_account != None
+        - productInstances is defined
+        - productInstances != None
+      fail_msg: "Failure: make sure to_virtual_account, from_virtual_account and productInstances are defined"
+      success_msg: "Success: to_virtual_account, from_virtual_account and productInstances found"
+
+  - name: "{{ infra }} : {{ domain_name }} : print input devices to be transferred"
+    debug:
+      msg:
+        - "productInstances: {{ productInstances }}"
+        - "to_virtual_account: {{ to_virtual_account }}"
+        - "from_virtual_account: {{ from_virtual_account }}"
+
+  - name: "{{ infra }} : {{ on_prem_ip.ip_port }} : get on premise token"
+    include_tasks: on_prem_transfer.yml
+    loop: "{{ on_prem_ips }}"
+    loop_control:
+      loop_var: on_prem_ip
+    vars:
+      api: "https://{{ on_prem_ip.ip_port }}/api/v1"

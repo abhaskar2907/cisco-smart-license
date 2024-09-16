@@ -1,0 +1,32 @@
+---
+- name: "{{ infra }} : {{ domain_name }} : fail if va_names in {{ infra }}.yml is empty"
+  fail:
+    msg: "Please provide va_names in {{ infra }}.yml"
+  when: not va_names or va_names is undefined
+
+- name: "{{ infra }} : {{ domain_name }} : virtual accounts to be created"
+  debug:
+    msg: "{{ va_names }}"
+
+- name: "{{ infra }} : {{ domain_name }} : create virtual accounts"
+  ansible.builtin.uri:
+    url: "{{ api }}/accounts/{{ domain_name_account | default(domain_name) }}/virtual-accounts"
+    method: POST
+    body_format: json
+    return_content: true
+    headers:
+      Authorization: Bearer {{ access_token }}
+      Content-Type: application/json
+    body:
+      name: "{{ item.name }}"
+      description: "{{ item.description }}"
+    validate_certs: false
+  register: create_va
+  loop: "{{ va_names }}"
+  loop_control:
+    label: "{{ item.name }}"
+  ignore_errors: True
+
+- name: "{{ infra }} : {{ domain_name }} : print create output"
+  debug:
+    msg: "{{ create_va | community.general.json_query('results[*].json') }}"
