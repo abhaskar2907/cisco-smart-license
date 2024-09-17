@@ -1,0 +1,65 @@
+---
+"on_prem_ips":
+  - "ip_port": "<ip>:<port>"
+    "client_id": "<alphanumeric-string>"
+    "client_secret": "<alphanumeric-string>"
+  - "ip_port": "<ip>:<port>"
+    "client_id": "<alphanumeric-string>"
+    "client_secret": "<alphanumeric-string>"
+
+user: 
+pass1: 
+exported_file_prefix: on_prem
+
+## input for operations like va and transfers which requires exact va name instead of list
+#domain_name: CSLA-On-Prem-Account
+#domain_name: csla-on-prem-02
+#va_name: new_VA_1
+
+# va creation/deletion parameters. Role name = va
+va_names:
+  - name: auto_va_1
+    description: This is auto_va_1
+  - name: auto_va_2
+    description: This is auto_va_2
+
+# Filter virtual account by name
+#va_name_list:
+#  - "new_VA_1"
+
+# transfer device across virtual account. Role Name = transfer
+domain_name: CSLA-On-Prem-Account
+#from_virtual_account: Default
+#to_virtual_account: new_VA_2
+from_virtual_account: new_VA_2
+to_virtual_account: Default
+productInstances:
+  - sudi:
+      suvi: null
+      uuid: null
+      hostIdentifier: null
+      udiPid: "C8000V"
+      udiSerialNumber: ""
+      udiVid: null
+      macAddress: null
+    productTagName: ""
+    targetVirtualAccount: "{{ to_virtual_account }}"
+
+# body for role name = sl_transfer
+token_create:
+  expiresAfterDays: 5
+  description: "license migration token from automation"
+  exportControlled: "Allowed"
+#  numberofUses: 3
+
+# device connection details for license transfer
+ansible_network_os: ios
+ansible_user: cisco
+ansible_password: 
+ansible_connection: network_cli
+
+# license transfer XE configs, role=sl_transfer
+transfer: false # setting default transfer to false
+#profile_name: CSSM
+destination_address: https://test.cisco.com/Transportgateway/services/DeviceRequestHandler
+

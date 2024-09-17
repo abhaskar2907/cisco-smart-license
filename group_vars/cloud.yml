@@ -1,0 +1,74 @@
+---
+# Authentication parameters
+cloud_oauth_api: "https://cloudsso.cisco.com/as/token.oauth2"
+client_id: ""
+client_secret: ""
+
+# API endpoints
+api: https://swapi.cisco.com/services/api/smart-accounts-and-licensing/v1
+api_v2: https://swapi.cisco.com//services/api/smart-accounts-and-licensing/v2
+
+# export file prefix
+exported_file_prefix: cloud
+print_all_va: false
+lrp_export_filename: test.csv
+sku_export_filename: test.csv
+
+# Virtual account filter
+va_names:
+  - "CSLA-Sandbox-VA3"
+  - "CSLA-Sandbox-VA1"
+  - "CSLA-Sandbox-VA2"
+  - "5921 EFT 1"
+
+#va_name: "5921 EFT 1"
+va_name: "CSLA-Sandbox-VA3"
+
+# Filter Virtual Accounts
+#va_name_list:
+#  - "CSLA-Sandbox-VA3"
+#  - "CSLA-Sandbox-VA1"
+#  - "CSLA-Sandbox-VA2"
+#  - "5921 EFT 1"
+
+# Create and delete virtual accounts
+# va_names:
+#   - name: auto_va_1
+#     description: This is auto_va_1
+#   - name: auto_va_2
+#     description: This is auto_va_2
+
+# transfer device across virtual account
+from_virtual_account: CSLA-Sandbox-VA3
+to_virtual_account: 5921-Default
+#from_virtual_account: 5921-Default
+#to_virtual_account: CSLA-Sandbox-VA3
+# api body for device transfer
+productInstances:
+  - sudi:
+      suvi: null
+      uuid: ""
+      hostIdentifier: null
+      udiPid: "UCM"
+      udiSerialNumber: ""
+      udiVid: null
+      macAddress: null
+    productTagName: ""
+    targetVirtualAccount: "{{ to_virtual_account }}"
+
+# api body for sl_transfer token generation
+token_create:
+  expiresAfterDays: 5
+  description: "license migration token from automation"
+  exportControlled: "Allowed"
+
+# device connection details for sl_transfer
+ansible_network_os: ios
+ansible_user: cisco
+ansible_password: 
+ansible_connection: network_cli
+
+# license transfer XE configs, role=sl_transfer
+transfer: false # setting default transfer to false
+#profile_name: CSSM
+destination_address: https://tools.cisco.com/its/service/oddce/services/DDCEService
