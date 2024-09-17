@@ -1,0 +1,8 @@
+[on_prem]
+on_prem_local ansible_connection=local
+#on_prem_device1 ansible_host=<IPAddress> ansible_ssh_common_args="-o KexAlgorithms=diffie-hellman-group-exchange-sha1"
+
+[cloud]
+cloud_local ansible_connection=local
+#cloud_device1 ansible_host=<IPAddress> ansible_ssh_common_args="-o KexAlgorithms=diffie-hellman-group-exchange-sha1"
+
